@@ -1543,11 +1543,13 @@ form[data-form="search"] {
   white-space: pre-wrap;
 }
 
-.msg.me {
+.chat .msg.me {
   align-self: flex-end;
   border-radius: 12px 12px 3px 12px;
-  background: var(--dark);
-  color: var(--gold-light);
+  background-color: #142b28 !important;
+  border-color: #0e5a4a;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(14, 90, 74, .2);
 }
 
 /* =====================================================
