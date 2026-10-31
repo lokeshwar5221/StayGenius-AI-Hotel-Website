@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StayGenius AI | Experience Exceptional Stays</title>
+<meta name="theme-color" content="#182126">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- PUBLIC LANDING PAGE -->
+<section id="landing">
+
+  <header class="landing-nav">
+    <a href="#top" class="luxury-logo" onclick="showLanding();return false;">
+      <span class="logo-icon">S</span>
+      <span>STAYGENIUS<small>AI HOTEL EXPERIENCE</small></span>
+    </a>
+
+    <nav class="landing-links" aria-label="Main navigation">
+      <a href="#experience">Experience</a>
+      <a href="#rooms-showcase">Our Rooms</a>
+      <a href="#how-it-works">How It Works</a>
+    </nav>
+
+    <button class="landing-login" onclick="showAuth()">Sign In ↗</button>
+  </header>
+
+  <!-- HERO -->
+  <section class="landing-hero" id="top">
+    <div class="hero-overlay"></div>
+
+    <div class="landing-hero-content">
+      <span class="eyebrow">✦ A BETTER WAY TO STAY</span>
+
+      <h1>
+        Discover comfort.<br>
+        <em>Experience luxury.</em>
+      </h1>
+
+      <p>
+        Your perfect stay near Tirumala begins here.
+        Discover beautiful rooms, effortless bookings and
+        personalized hospitality powered by StayGenius AI.
+      </p>
+
+      <div class="hero-actions">
+        <button class="gold-button" onclick="showAuth()">
+          Explore Your Stay <span>↗</span>
+        </button>
+
+        <a href="#rooms-showcase" class="outline-button">
+          Discover Rooms ↓
+        </a>
+      </div>
+
+      <div class="hero-note">
+        <span class="gold-dot"></span>
+        Thoughtful hospitality · Smart bookings · Better stays
+      </div>
+    </div>
+
+    <div class="hero-side-text">STAYGENIUS AI · TIRUPATI</div>
+
+    <div class="hero-bottom">
+      <span>YOUR JOURNEY STARTS HERE</span>
+      <span>01 / 04</span>
+    </div>
+  </section>
+
+  <!-- INTRODUCTION -->
+  <section class="intro-section" id="experience">
+
+    <div class="intro-label">WELCOME TO STAYGENIUS</div>
+
+    <div class="intro-content">
+      <h2>
+        More than a room.<br>
+        <em>A memorable experience.</em>
+      </h2>
+
+      <p>
+        StayGenius AI is a smart hotel management and guest
+        booking platform designed to make every stay simple
+        and comfortable. Explore rooms, check availability,
+        manage reservations and enjoy personalized assistance
+        in one convenient place.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+
+      <article class="feature-card">
+        <span>01</span>
+        <div class="feature-icon">⌂</div>
+        <h3>Beautiful Stays</h3>
+        <p>Explore comfortable rooms designed for relaxation and convenience.</p>
+      </article>
+
+      <article class="feature-card">
+        <span>02</span>
+        <div class="feature-icon">✧</div>
+        <h3>Smart Booking</h3>
+        <p>Check room availability, compare prices and reserve with ease.</p>
+      </article>
+
+      <article class="feature-card">
+        <span>03</span>
+        <div class="feature-icon">♡</div>
+        <h3>Personalized Care</h3>
+        <p>Get assistance, request services and manage your preferences.</p>
+      </article>
+
+      <article class="feature-card">
+        <span>04</span>
+        <div class="feature-icon">◈</div>
+        <h3>AI Concierge</h3>
+        <p>Get helpful answers and personalized guest support.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ROOM SHOWCASE -->
+  <section class="showcase-section" id="rooms-showcase">
+
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow dark">FIND YOUR PERFECT SPACE</span>
+        <h2>Spaces made for <em>you.</em></h2>
+      </div>
+
+      <p>
+        From cozy escapes to spacious suites,
+        find the room that makes your journey special.
+      </p>
+    </div>
+
+    <div class="showcase-grid">
+
+      <article class="showcase-card showcase-large">
+        <img
+          src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1200&q=85"
+          alt="Comfortable standard hotel bedroom"
+          loading="lazy">
+
+        <div class="showcase-info">
+          <span>01 / COMFORT</span>
+          <h3>Standard Room</h3>
+          <p>A relaxing space for a comfortable stay.</p>
+        </div>
+      </article>
+
+      <article class="showcase-card">
+        <img
+          src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=900&q=85"
+          alt="Elegant deluxe hotel bedroom"
+          loading="lazy">
+
+        <div class="showcase-info">
+          <span>02 / ELEGANCE</span>
+          <h3>Deluxe Room</h3>
+          <p>Extra comfort with elegant interiors.</p>
+        </div>
+      </article>
+
+      <article class="showcase-card">
+        <img
+          src="https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=900&q=85"
+          alt="Executive hotel bedroom"
+          loading="lazy">
+
+        <div class="showcase-info">
+          <span>03 / PREMIUM</span>
+          <h3>Executive Room</h3>
+          <p>Premium space for a refined experience.</p>
+        </div>
+      </article>
+
+      <article class="showcase-card showcase-wide">
+        <img
+          src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=85"
+          alt="Luxury hotel suite and resort"
+          loading="lazy">
+
+        <div class="showcase-info">
+          <span>04 / EXCLUSIVE</span>
+          <h3>Luxury Suite</h3>
+          <p>More space, more privacy and more memorable moments.</p>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="showcase-cta">
+      <p>Found the room you love?</p>
+      <button class="gold-button" onclick="showAuth()">
+        Find Your Room ↗
+      </button>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="steps-section" id="how-it-works">
+
+    <div class="steps-heading">
+      <span class="eyebrow dark">SIMPLE BY DESIGN</span>
+      <h2>Your stay in <em>three steps.</em></h2>
+    </div>
+
+    <div class="steps-grid">
+
+      <div class="step-card">
+        <span>01</span>
+        <h3>Explore</h3>
+        <p>Discover our rooms, amenities and accommodation options.</p>
+      </div>
+
+      <div class="step-card">
+        <span>02</span>
+        <h3>Reserve</h3>
+        <p>Select your dates, check availability and book your room.</p>
+      </div>
+
+      <div class="step-card">
+        <span>03</span>
+        <h3>Enjoy</h3>
+        <p>Relax and use our concierge services throughout your stay.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta">
+    <div>
+      <span class="eyebrow">YOUR NEXT JOURNEY AWAITS</span>
+
+      <h2>
+        Make room for<br>
+        <em>something beautiful.</em>
+      </h2>
+
+      <p>Experience smarter hospitality with StayGenius AI.</p>
+
+      <button class="gold-button" onclick="showAuth()">
+        Start Your Stay ↗
+      </button>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="landing-footer">
+
+    <a href="#top" class="luxury-logo">
+      <span class="logo-icon">S</span>
+      <span>STAYGENIUS<small>AI HOTEL EXPERIENCE</small></span>
+    </a>
+
+    <p>© 2026 StayGenius AI. Smart hospitality, better experiences.</p>
+
+    <a href="#" onclick="showAuth();return false;">
+      Guest Login ↗
+    </a>
+
+  </footer>
+
+</section>
+
+<!-- LOGIN / REGISTRATION -->
+<section id="login" class="auth" hidden>
+
+  <div class="auth-hero">
+    <h1>Every room priced for the day it is wanted.</h1>
+
+    <p>
+      StayGenius AI runs bookings, guest requests and room
+      pricing for a 120-room hotel in Tirupati.
+    </p>
+
+    <div class="board-art" aria-hidden="true"></div>
+  </div>
+
+  <div class="auth-card">
+
+    <button class="back-home" type="button" onclick="showLanding()">
+      ← Back to homepage
+    </button>
+
+    <h2 id="auth-title">Sign in</h2>
+
+    <form data-form="login" id="login-form">
+
+      <label>
+        Name
+        <input name="name" id="reg-name" autocomplete="name" hidden>
+      </label>
+
+      <label>
+        Email
+        <input name="email" type="email" required autocomplete="email">
+      </label>
+
+      <label>
+        Password
+        <input name="password" type="password" required minlength="8" autocomplete="current-password">
+      </label>
+
+      <p class="error" id="auth-error" role="alert"></p>
+
+      <button class="btn primary" id="auth-submit">Sign in</button>
+
+    </form>
+
+    <button class="link" id="toggle-auth">
+      New guest? Create an account
+    </button>
+
+    <div class="demo">
+      <p>Try a demo account</p>
+
+      <button class="chip" data-demo="guest@staygenius.com|Guest@123">Guest</button>
+      <button class="chip" data-demo="frontdesk@staygenius.com|Admin@123">Front office</button>
+      <button class="chip" data-demo="manager@staygenius.com|Admin@123">Manager</button>
+      <button class="chip" data-demo="admin@staygenius.com|Admin@123">Admin</button>
+    </div>
+
+  </div>
+</section>
+
+<!-- EXISTING APPLICATION DASHBOARD -->
+<div id="app" hidden>
+
+  <aside>
+    <div class="brand">StayGenius</div>
+    <nav id="nav"></nav>
+
+    <div class="me">
+      <strong id="me-name"></strong>
+      <span id="me-role"></span>
+      <button class="link" id="logout">Sign out</button>
+    </div>
+  </aside>
+
+  <main id="view" tabindex="-1"></main>
+
+</div>
+
+<div id="toast" role="status"></div>
+<dialog id="dlg"></dialog>
+
+<script src="js/app.js"></script>
+
+</body>
+</html>
