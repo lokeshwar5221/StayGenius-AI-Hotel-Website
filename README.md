@@ -16,11 +16,13 @@ Stack: HTML + CSS + JavaScript (frontend), Flask (backend), MySQL (database), sc
    pip install -r requirements.txt
    ```
 4. Copy `backend/.env.example` to `backend/.env` and set `DB_PASSWORD` to your MySQL root password. Optional: paste a Gemini key in `GEMINI_API_KEY`.
+   For Razorpay test checkout, set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_MODE=test`, and `PAYMENTS_REQUIRED=true` in `backend/.env`. Use a newly generated test secret; never commit `.env` or expose live credentials.
 5. Make sure MySQL is running, then create the tables and synthetic data (takes about 20-60 seconds):
    ```
    python seed.py
    ```
    (Alternative: run `database/schema.sql` in MySQL Workbench, then `python seed.py`.)
+   For an existing database, install the new dependency with `pip install -r requirements.txt` from `backend`, then run `database/razorpay_migration.sql` against the `staygenius` database. Do not rerun `seed.py` on a database with data because it recreates demo data.
 6. Start the server:
    ```
    python app.py

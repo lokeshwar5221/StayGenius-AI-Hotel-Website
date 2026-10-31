@@ -917,11 +917,8 @@ const pages = {
 
     view(
       head('Room board', `${r.length} rooms. Select a room to change its status.`) +
-
       `
-
       <div class="legend">
-
         ${['vacant', 'occupied', 'cleaning', 'maintenance'].map(s => `
 
           <span>
@@ -1876,19 +1873,67 @@ const acts = {
 
     const s = state.search;
 
-    await api('/bookings', {
-      method: 'POST',
+    const booking = {
+      room_type_id: +d.id,
+      ...s,
+      guests: +s.guests
+    };
 
-      body: {
-        room_type_id: +d.id,
-        ...s,
-        guests: +s.guests
+    const order = await api('/payments/orders', {
+      method: 'POST',
+      body: booking
+    });
+
+    if (!order.required) {
+      await api('/bookings', {
+        method: 'POST',
+        body: booking
+      });
+
+      toast('Booking confirmed.');
+      go('stays');
+      return;
+    }
+
+    if (!window.Razorpay) {
+      throw new Error('Payment checkout could not load. Please refresh and try again.');
+    }
+
+    const checkout = new Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: 'StayGenius',
+      description: 'Room booking',
+      order_id: order.order_id,
+      prefill: {
+        name: order.name,
+        email: order.email
+      },
+      theme: { color: '#0e5a4a' },
+      handler: async response => {
+        try {
+          await api('/payments/verify', {
+            method: 'POST',
+            body: response
+          });
+
+          toast('Payment successful. Booking confirmed.');
+          go('stays');
+        } catch (error) {
+          toast(error.message, true);
+        }
+      },
+      modal: {
+        ondismiss: () => toast('Payment not completed. You can retry within 15 minutes.', true)
       }
     });
 
-    toast('Booking confirmed.');
+    checkout.on('payment.failed', response => {
+      toast(response.error?.description || 'Payment failed. Please try again.', true);
+    });
 
-    go('stays');
+    checkout.open();
 
   },
 
@@ -2312,7 +2357,6 @@ const forms = {
       'beforeend',
       `<div class="msg">
         ${esc(r.reply)}
-        ${r.request_id ? '\n✓ Request sent to our team' : ''}
       </div>`
     );
 
