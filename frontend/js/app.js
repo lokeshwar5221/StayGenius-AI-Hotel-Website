@@ -1,7 +1,6 @@
 /* StayGenius AI - Frontend JavaScript */
 
-const API = location.port === '5000' ? '' : 'http://localhost:5000';
-
+const API = location.port === '5000' ? '' : 'https://staygenius.onrender.com/';
 const $ = s => document.querySelector(s);
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
