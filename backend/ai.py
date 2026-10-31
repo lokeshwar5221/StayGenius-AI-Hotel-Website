@@ -155,19 +155,31 @@ def gemini(prompt, system=None, as_json=False):
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         return None
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')}:generateContent?key={key}"
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     body = {"contents": [{"parts": [{"text": prompt}]}]}
     if system:
         body["systemInstruction"] = {"parts": [{"text": system}]}
     if as_json:
         body["generationConfig"] = {"responseMimeType": "application/json"}
     try:
-        r = requests.post(url, json=body, timeout=30)
+        r = requests.post(
+            url,
+            json=body,
+            headers={"x-goog-api-key": key},
+            timeout=15
+        )
         r.raise_for_status()
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as e:  # network/key/quota problems -> fallback
-        print("Gemini unavailable:", e)
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else "unknown"
+        print(f"Gemini unavailable (HTTP {status}). Check GEMINI_API_KEY and GEMINI_MODEL.")
+    except requests.RequestException:
+        print("Gemini unavailable (network error).")
+    except (KeyError, IndexError, TypeError, ValueError):
+        print("Gemini returned an unexpected response.")
         return None
+    return None
 
 
 def draft_reply(review):
@@ -217,38 +229,145 @@ def review_insights():
 # ------------------------------ Guest assistant ------------------------------
 INTENTS = {"housekeeping": "towel clean housekeeping blanket pillow laundry soap bedsheet toiletries room service cleaning",
            "food": "food hungry breakfast lunch dinner thali coffee tea tiffin idli dosa order eat",
-           "maintenance": "ac tv wifi leak tap geyser light fan broken not working remote flush plumber"}
+           "maintenance": "ac wifi leak tap geyser light fan broken not working remote flush plumber",
+           "complaint": "complaint complain unhappy disappointed bad experience issue problem feedback"}
 ACK = {"en": "I have raised a {c} request for you. The team will be with you shortly.",
        "hi": "मैंने आपके लिए {c} अनुरोध दर्ज कर दिया है। हमारी टीम जल्द ही आपके पास पहुँचेगी।",
        "te": "మీ కోసం {c} అభ్యర్థనను నమోదు చేశాను. మా బృందం త్వరలో మీ వద్దకు వస్తుంది.",
        "ta": "உங்களுக்காக {c} கோரிக்கையைப் பதிவு செய்துள்ளேன். எங்கள் குழு விரைவில் வரும்."}
-GENERAL = {"en": "I can help with housekeeping, food orders, maintenance, check-out time (11:00 AM) and nearby temple information. What do you need?",
-           "hi": "मैं हाउसकीपिंग, भोजन, मरम्मत, चेक-आउट समय (सुबह 11 बजे) और मंदिर की जानकारी में मदद कर सकता हूँ। आपको क्या चाहिए?",
-           "te": "హౌస్‌కీపింగ్, భోజనం, మరమ్మతులు, చెక్-అవుట్ సమయం (ఉదయం 11) మరియు ఆలయ సమాచారంలో సహాయం చేయగలను. మీకు ఏమి కావాలి?",
-           "ta": "ஹவுஸ்கீப்பிங், உணவு, பழுது, செக்-அவுட் நேரம் (காலை 11) மற்றும் கோவில் தகவல்களில் உதவ முடியும். உங்களுக்கு என்ன வேண்டும்?"}
 LANG_NAMES = {"en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada", "ml": "Malayalam"}
+PLACES = (
+    "Sri Venkateswara Temple (Tirumala)",
+    "Sri Padmavathi Ammavari Temple (Tiruchanur)",
+    "Sri Govindaraja Swamy Temple",
+    "Kapila Theertham",
+    "ISKCON Tirupati",
+    "Chandragiri Fort"
+)
 
 
-def assistant(message, lang, ctx):
-    """Returns (reply, category_or_None, request_text)."""
-    sys = (f"You are StayGenius, the digital concierge of a 120-room hotel in Tirupati, India. Guest: {ctx.get('name')}. "
-           f"Room: {ctx.get('room') or 'not checked in yet'}. Check-out: 11:00 AM. Reply ONLY in {LANG_NAMES.get(lang, 'English')}, "
-           "briefly and politely. If the guest asks for something the hotel staff must do, set intent to housekeeping, food or "
-           "maintenance; otherwise 'none'. Never promise prices or things you cannot verify. Return JSON: "
-           '{"reply": str, "intent": "none|housekeeping|food|maintenance", "request_text": "short English summary for staff"}')
-    raw = gemini(message, system=sys, as_json=True)
+def _request_intent(message):
+    text = message.lower()
+    words = set(re.findall(r"[a-z]+", text))
+    complaint_cues = (
+        "complaint", "complain", "unhappy", "disappointed", "bad experience",
+        "problem", "issue", "dirty", "broken", "not working", "doesn't work",
+        "does not work", "leaking", "rude", "wrong order", "cold food"
+    )
+    if any(cue in text for cue in complaint_cues):
+        if words & set("ac wifi leak tap geyser light fan broken plumber flush".split()):
+            return "maintenance"
+        if words & set("towel towels blanket blankets pillow pillows bedsheet toiletries clean cleaning".split()):
+            return "housekeeping"
+        if words & set("food breakfast dinner lunch thali coffee tea dosa idli".split()):
+            return "food"
+        return "complaint"
+
+    action_cues = (
+        "please send", "send me", "bring me", "please bring", "order me",
+        "place an order", "i want", "i need", "can i get", "could i get",
+        "i would like", "i'd like", "can you send", "could you send",
+        "can you bring", "could you bring", "please arrange", "request a",
+        "request an"
+    )
+    if not any(cue in text for cue in action_cues):
+        return None
+
+    if words & set("towel towels blanket blankets pillow pillows bedsheet toiletries housekeeping clean".split()):
+        return "housekeeping"
+    if words & set("food breakfast dinner lunch thali coffee tea dosa idli tiffin".split()):
+        return "food"
+    if words & set("ac wifi leak tap geyser light fan remote flush plumber".split()):
+        return "maintenance"
+    return None
+
+
+def _local_guest_answer(message, ctx):
+    text = message.lower()
+
+    if any(word in text for word in ("menu", "food options", "what food", "food do you", "eat", "hungry")):
+        menu = ctx.get("menu", [])
+        if menu:
+            items = "\n".join(
+                f"- {item['name']}: ₹{float(item['price']):.0f}"
+                for item in menu
+            )
+            return "Here are the food items currently listed by the hotel:\n" + items + "\nTell me what you would like to order."
+        return "I can’t retrieve the current menu right now. Please contact the front desk for today’s food options."
+
+    if any(word in text for word in ("temple", "darshan", "nearby", "near me", "places to visit", "places nearby", "attractions", "sightseeing", "visit")):
+        places = "\n".join(f"- {place}" for place in PLACES)
+        return ("Popular places to consider in and around Tirupati include:\n" + places +
+                "\nTirumala darshan access and timings can change, so check the official TTD updates before travelling.")
+
+    if any(word in text for word in ("check out", "checkout", "check-out")):
+        return "Check-out time is 11:00 AM. If you need a later check-out, I can ask the front desk to check availability."
+
+    if any(word in text for word in ("service", "services", "laundry", "housekeeping", "room service", "wifi", "wi-fi", "maintenance")):
+        services = ctx.get("services", [])
+        if services:
+            items = "\n".join(
+                f"- {item['name']}" + (f" (₹{float(item['price']):.0f})" if float(item["price"]) > 0 else "")
+                for item in services
+            )
+            return "Here are the services currently listed by the hotel:\n" + items + "\nTell me what you need and I can send a request to the team."
+        return "I can help with food, housekeeping, and maintenance requests. Tell me what you need."
+
+    if re.search(r"\b(hi|hello|hey|good morning|good evening)\b", text):
+        guest = ctx.get("name", "")
+        first = guest.split()[0] if guest else "there"
+        return (f"Hello {first}! I can answer questions about the hotel, show the current food menu, "
+                "suggest Tirupati temples and places to visit, or send a request or complaint to the staff. What can I help with?")
+
+    return ("Our live AI assistant is temporarily unavailable, but I can still help with the hotel’s current food menu, "
+            "housekeeping and maintenance, check-out, Tirupati temples and local places, or a request or complaint for staff. "
+            "Tell me a little more about what you need.")
+
+
+def assistant(message, lang, ctx, history=None):
+    """Return (reply, request category, staff summary, used_gemini)."""
+    menu = ctx.get("menu", [])
+    services = ctx.get("services", [])
+    safe_history = [
+        {"role": item["role"], "content": str(item["content"])[:500]}
+        for item in (history or [])[-8:]
+        if isinstance(item, dict)
+        and item.get("role") in ("user", "assistant")
+        and item.get("content")
+    ]
+    sys = (
+        f"You are StayGenius, the conversational guest concierge for a hotel in Tirupati, India. "
+        f"Guest: {ctx.get('name')}. Room: {ctx.get('room') or 'not checked in'}; check-out is 11:00 AM. "
+        f"Reply only in {LANG_NAMES.get(lang, 'English')}, naturally and directly, using prior turns for context. "
+        f"Use only the supplied live menu and hotel service catalogue for hotel prices/services. "
+        f"For Tirupati recommendations, you may suggest: {', '.join(PLACES)}. Do not invent distances, opening hours, "
+        "darshan availability, hotel policies, or services; advise checking official TTD updates for current temple access. "
+        "Answer informational questions without creating a request. Create an intent only when the guest explicitly asks "
+        "staff to do something or reports a complaint/problem. Never claim a request was sent; the application confirms that. "
+        "Return JSON with reply, intent (none|housekeeping|food|maintenance|complaint), and request_text (short English staff summary)."
+    )
+    prompt = json.dumps({
+        "food_menu": menu,
+        "hotel_services": services,
+        "conversation_history": safe_history,
+        "latest_guest_message": message
+    }, ensure_ascii=False)
+    raw = gemini(prompt, system=sys, as_json=True)
     if raw:
         try:
             j = json.loads(re.sub(r"^```(?:json)?|```$", "", raw.strip()).strip())
             cat = j.get("intent") if j.get("intent") in INTENTS else None
-            return str(j.get("reply", "")), cat, str(j.get("request_text") or message)[:280]
+            reply = str(j.get("reply", "")).strip()
+            if reply:
+                return reply, cat, str(j.get("request_text") or message)[:280], True
         except Exception:
             pass
-    toks = set(re.findall(r"[a-z]+", message.lower()))
-    for cat, words in INTENTS.items():
-        if toks & set(words.split()):
-            return ACK.get(lang, ACK["en"]).format(c=cat), cat, message[:280]
-    return GENERAL.get(lang, GENERAL["en"]), None, ""
+
+    cat = _request_intent(message)
+    reply = _local_guest_answer(message, ctx)
+    if cat:
+        return reply, cat, message[:280], False
+    return reply, None, "", False
 
 
 # ------------------------------ Personalised upsell ------------------------------

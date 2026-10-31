@@ -35,6 +35,7 @@ ROLES = ("guest", "staff", "manager", "admin")
 STAFF = ("staff", "manager", "admin")
 ROOM_STATUS = ("vacant", "occupied", "cleaning", "maintenance")
 CATS = ("housekeeping", "food", "maintenance")
+REQUEST_CATS = (*CATS, "complaint")
 
 
 class Provider(DefaultJSONProvider):
@@ -1317,7 +1318,7 @@ def create_request():
             cat = s["category"]
             desc = desc or s["name"]
 
-    if cat not in CATS or not desc:
+    if cat not in REQUEST_CATS or not desc:
         return err("Choose a category and describe what you need.")
 
     rid = db.execute(
@@ -1333,7 +1334,7 @@ def create_request():
             cat,
             desc,
             price,
-            "high" if cat == "maintenance" else "normal"
+            "high" if cat in ("maintenance", "complaint") else "normal"
         )
     )
 
@@ -1843,20 +1844,32 @@ def assistant():
         FROM bookings b
         JOIN rooms r ON r.id=b.room_id
         WHERE b.guest_id=%s
-        AND b.status='checked_in'
+        AND b.status IN ('checked_in','confirmed')
+        ORDER BY (b.status='checked_in') DESC, b.check_in
         LIMIT 1
         """,
         (g.user["id"],),
         one=True
     )
 
-    text, cat, req = ai.assistant(
+    catalogue = [
+        {**item, "price": float(item["price"])}
+        for item in db.query(
+            "SELECT name,category,price FROM services ORDER BY category,name"
+        )
+    ]
+    menu = [item for item in catalogue if item["category"] == "food"]
+
+    text, cat, req, used_gemini = ai.assistant(
         msg,
         lang if lang in ai.LANG_NAMES else "en",
         {
             "name": g.user["name"],
-            "room": b and b["number"]
-        }
+            "room": b and b["number"],
+            "services": catalogue,
+            "menu": menu
+        },
+        d.get("history")
     )
 
     created = None
@@ -1874,19 +1887,18 @@ def assistant():
                 g.user["id"],
                 cat,
                 req or msg,
-                "high" if cat == "maintenance" else "normal"
+                "high" if cat in ("maintenance", "complaint") else "normal"
             )
         )
 
     elif cat:
-        if lang == "en":
-            text += "\n(Requests open after check-in.)"
+        text += "\n\nI can send this to the hotel team once you have a confirmed or active booking."
 
     return jsonify({
         "reply": text,
         "request_id": created,
         "category": cat,
-        "genai": bool(os.getenv("GEMINI_API_KEY"))
+        "genai": used_gemini
     })
 
 

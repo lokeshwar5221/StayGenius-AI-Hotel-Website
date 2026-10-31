@@ -16,3 +16,6 @@ CREATE TABLE IF NOT EXISTS payments (
   FOREIGN KEY (guest_id) REFERENCES users(id),
   INDEX idx_payment_expiry (status, created_at)
 );
+
+ALTER TABLE service_requests
+  MODIFY category ENUM('housekeeping','food','maintenance','complaint') NOT NULL;

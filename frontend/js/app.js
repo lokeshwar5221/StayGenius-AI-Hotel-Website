@@ -34,7 +34,8 @@ let user = JSON.parse(sessionStorage.getItem('sg_user') || 'null');
 
 let state = {
   search: null,
-  page: null
+  page: null,
+  assistantHistory: []
 };
 
 
@@ -744,6 +745,16 @@ const pages = {
 
   async assistant() {
 
+    const history = state.assistantHistory.map(message => `
+      <div class="msg ${message.role === 'user' ? 'me' : ''}">${esc(message.content)}</div>
+    `).join('');
+
+    const greeting = `
+      <div class="msg">
+        Hello ${esc(user.name.split(' ')[0])}! I can help with hotel services, food, local temples, or a request for our team.
+      </div>
+    `;
+
     view(
       head(
         'Concierge',
@@ -756,10 +767,7 @@ const pages = {
 
         <div class="chat" id="chat">
 
-          <div class="msg">
-            Hello ${esc(user.name.split(' ')[0])}!
-            How can I help during your stay?
-          </div>
+          ${history || greeting}
 
         </div>
 
@@ -2338,27 +2346,45 @@ const forms = {
   async chat(v, f) {
 
     const c = $('#chat');
+    const history = state.assistantHistory.slice(-8);
 
-    c.insertAdjacentHTML(
-      'beforeend',
-      `<div class="msg me">${esc(v.message)}</div>`
-    );
+    const userMessage = document.createElement('div');
+    userMessage.className = 'msg me';
+    userMessage.textContent = v.message;
+    c.append(userMessage);
 
     f.message.value = '';
 
+    const thinking = document.createElement('div');
+    thinking.className = 'msg thinking';
+    thinking.textContent = 'StayGenius is thinking...';
+    c.append(thinking);
     c.scrollTop = c.scrollHeight;
 
-    const r = await api('/assistant', {
-      method: 'POST',
-      body: v
-    });
+    try {
+      const r = await api('/assistant', {
+        method: 'POST',
+        body: { ...v, history }
+      });
 
-    c.insertAdjacentHTML(
-      'beforeend',
-      `<div class="msg">
-        ${esc(r.reply)}
-      </div>`
-    );
+      const confirmation = r.request_id
+        ? `\n\nRequest #${r.request_id} has been sent to the hotel team.`
+        : '';
+      const reply = document.createElement('div');
+      reply.className = 'msg';
+      reply.textContent = r.reply + confirmation;
+      thinking.remove();
+      c.append(reply);
+
+      state.assistantHistory = [
+        ...history,
+        { role: 'user', content: v.message },
+        { role: 'assistant', content: r.reply }
+      ].slice(-12);
+    } catch (error) {
+      thinking.textContent = 'I could not reach the concierge. Please try again.';
+      throw error;
+    }
 
     c.scrollTop = c.scrollHeight;
 

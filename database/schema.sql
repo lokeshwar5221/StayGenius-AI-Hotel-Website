@@ -85,7 +85,7 @@ CREATE TABLE service_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   booking_id INT NOT NULL,
   guest_id INT NOT NULL,
-  category ENUM('housekeeping','food','maintenance') NOT NULL,
+  category ENUM('housekeeping','food','maintenance','complaint') NOT NULL,
   description VARCHAR(300) NOT NULL,
   price DECIMAL(10,2) NOT NULL DEFAULT 0,
   status ENUM('pending','in_progress','done') NOT NULL DEFAULT 'pending',
