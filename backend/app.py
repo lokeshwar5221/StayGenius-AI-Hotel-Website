@@ -138,8 +138,8 @@ def create_access_token(uid, role):
     )
 
 
-def token_response(uid, code=200):
-    u = db.query(
+def token_response(uid, code=200, user_row=None):
+    u = user_row or db.query(
         "SELECT id,name,email,role,language FROM users WHERE id=%s",
         (uid,),
         one=True
@@ -147,7 +147,10 @@ def token_response(uid, code=200):
 
     return jsonify({
         "token": create_access_token(uid, u["role"]),
-        "user": u
+        "user": {
+            key: u[key]
+            for key in ("id", "name", "email", "role", "language")
+        }
     }), code
 
 
@@ -351,7 +354,8 @@ def login():
         )
 
     u = db.query(
-        "SELECT id,password_hash,active FROM users WHERE email=%s",
+        "SELECT id,name,email,role,language,password_hash,active "
+        "FROM users WHERE email=%s",
         (email,),
         one=True
     )
@@ -369,7 +373,7 @@ def login():
 
     FAILS.pop(email, None)
 
-    return token_response(u["id"])
+    return token_response(u["id"], user_row=u)
 
 
 @app.get("/api/me")
@@ -1664,29 +1668,39 @@ def forecast():
     return jsonify(ai.forecast_weekly(weeks))
 
 
-def window_stats(start, end, group=False):
-    expr = (
-        "GREATEST(0, DATEDIFF(LEAST(check_out,%s), "
-        "GREATEST(check_in,%s)))"
-    )
+def window_stats_batch(windows):
+    """Calculate nights and revenue for several date windows in one query."""
+    expressions = []
+    params = []
 
-    sql = f"""
-    SELECT
-        COALESCE(SUM({expr}),0) nights,
-        COALESCE(SUM(b.rate*{expr}),0) revenue
-    FROM bookings b
-    WHERE status<>'cancelled'
-    AND check_in<%s
-    AND check_out>%s
-    """
+    for i, (start, end) in enumerate(windows):
+        nights = (
+            "GREATEST(0,DATEDIFF(LEAST(check_out,%s),"
+            "GREATEST(check_in,%s)))"
+        )
+        expressions.extend((
+            f"COALESCE(SUM({nights}),0) n{i}",
+            f"COALESCE(SUM(b.rate*{nights}),0) revenue{i}"
+        ))
+        params.extend((end, start, end, start))
 
-    r = db.query(
-        sql,
-        (end, start, end, start, end, start),
+    params.extend((max(end for _, end in windows),
+                   min(start for start, _ in windows)))
+    row = db.query(
+        f"""
+        SELECT {','.join(expressions)}
+        FROM bookings b
+        WHERE status<>'cancelled'
+        AND check_in<%s
+        AND check_out>%s
+        """,
+        params,
         one=True
     )
-
-    return float(r["nights"]), float(r["revenue"])
+    return [
+        (float(row[f"n{i}"]), float(row[f"revenue{i}"]))
+        for i in range(len(windows))
+    ]
 
 
 @app.get("/api/dashboard")
@@ -1695,13 +1709,8 @@ def dashboard():
     """Occupancy, ADR, RevPAR, revenue and operations metrics."""
 
     today = dt.date.today()
-    total = ai.total_rooms()
-
-    nights, rev = window_stats(
-        today - dt.timedelta(days=30),
-        today
-    )
-
+    month_windows = []
+    month_labels = []
     monthly = []
 
     for i in range(5, -1, -1):
@@ -1710,11 +1719,24 @@ def dashboard():
         ).replace(day=1)
 
         nxt = (first + dt.timedelta(days=32)).replace(day=1)
+        month_windows.append((first, nxt))
+        month_labels.append(first.strftime("%b"))
 
-        n, r = window_stats(first, nxt)
+    windows = [(today - dt.timedelta(days=30), today), *month_windows]
+    stats = window_stats_batch(windows)
+    nights, rev = stats[0]
+    room_status = {
+        r["status"]: r["c"]
+        for r in db.query(
+            "SELECT status, COUNT(*) c FROM rooms GROUP BY status"
+        )
+    }
+    total = sum(room_status.values()) or 1
 
+    for i, (n, r) in enumerate(stats[1:]):
+        first, nxt = month_windows[i]
         monthly.append({
-            "label": first.strftime("%b"),
+            "label": month_labels[i],
             "revenue": round(r),
             "occupancy": round(
                 100 * n / (total * (nxt - first).days),
@@ -1758,12 +1780,7 @@ def dashboard():
     return jsonify({
         "total_rooms": total,
 
-        "room_status": {
-            r["status"]: r["c"]
-            for r in db.query(
-                "SELECT status, COUNT(*) c FROM rooms GROUP BY status"
-            )
-        },
+        "room_status": room_status,
 
         "occupancy_30d": round(
             100 * nights / (total * 30),
